@@ -9,28 +9,31 @@ import (
 )
 
 
-type Rating struct { // Struct for rating
+type Teacher struct { // Struct for teacher
 	TotalRating float64
-	mutex sync.Mutex
 }
 
 type Student struct { // Struct for student
 	id int
 }
 
-func (student Student) getrating(wg *sync.WaitGroup, totalrating *Rating) { // Function for getting rating from a student
+func (student Student) getrating(wg *sync.WaitGroup, result chan<- float64) { // Function for getting rating from a student
 	defer wg.Done()
-	time.Sleep(time.Millisecond * 50)
-	totalrating.mutex.Lock()
-	totalrating.TotalRating += 0.01 * float64(rand.Intn(1000))
-	totalrating.mutex.Unlock()
+	randomtime := rand.Intn(50)
+	time.Sleep(time.Millisecond * time.Duration(randomtime))
+	result <- 0.01 * float64(rand.Intn(1000))
+	//teacher.mutex.Lock()
+	//teacher.TotalRating += 0.01 * float64(rand.Intn(1000))
+
+	//teacher.mutex.Unlock()
 }
 
 func main() {
 	rand.Seed(time.Now().UnixNano()) // Changing seed according to time
 	const NumberOfStudents = 200
-	var totalrating = Rating{0.0, sync.Mutex{}}
-	Students := []Student{}
+	var teacher = Teacher{0.0}
+	var Students []Student
+	var result = make(chan float64, NumberOfStudents)
 	var wg sync.WaitGroup
 
 	for StudentId :=0; StudentId<NumberOfStudents; StudentId++ {
@@ -38,10 +41,15 @@ func main() {
 	}
 	for _, student := range Students {
 		wg.Add(1)
-		go student.getrating(&wg, &totalrating)
+		go student.getrating(&wg, result)
 	}
 	wg.Wait()
-	totalrating.TotalRating /= float64(NumberOfStudents)
-	totalrating.TotalRating = math.Round(totalrating.TotalRating*100)/100
-	fmt.Println(totalrating.TotalRating)
+
+	for i := 0; i < NumberOfStudents; i++ {
+		teacher.TotalRating += <- result
+	}
+
+	teacher.TotalRating /= float64(NumberOfStudents)
+	teacher.TotalRating = math.Round(teacher.TotalRating*100)/100
+	fmt.Println("TotalRating of class teacher", teacher.TotalRating)
 }

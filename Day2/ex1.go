@@ -8,6 +8,7 @@ import (
 type Frequency struct { // Struct for overall frequency
 	frequency map[string]int
 	mutex sync.Mutex
+	words []string
 }
 
 func (frequency *Frequency) FrequencyCalculator(id int, jobs <-chan string, wg *sync.WaitGroup)  { // go routine for calculating frequency of a word
@@ -27,19 +28,18 @@ func (frequency *Frequency) FrequencyCalculator(id int, jobs <-chan string, wg *
 
 func main(){
 	words := []string{"quick", "dog", "dog", "dog", "dog"}
-	numWords := len(words)
 	jobs := make(chan string)
-	var finalfrequency = Frequency{make(map[string]int), sync.Mutex{}}
+	var finalfrequency = Frequency{make(map[string]int), sync.Mutex{}, words}
 	var wg sync.WaitGroup
 
 	fmt.Println("For given string ", words)
-
+	numWords := len(finalfrequency.words)
 	for workernumber := 0; workernumber < numWords; workernumber++ {
 		wg.Add(1)
 		go finalfrequency.FrequencyCalculator(workernumber, jobs, &wg)
 	}
 	for position := 0; position < numWords; position++ {
-		jobs <- words[position]
+		jobs <- finalfrequency.words[position]
 	}
 
 	wg.Wait()
